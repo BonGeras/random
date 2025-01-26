@@ -5,15 +5,23 @@
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <!-- Основные данные приложения -->
+        <include domain="root" path="."/>
+        <include domain="file" path="images"/>
+        <include domain="database" path="notes.db"/>
+        <include domain="sharedpref" path="default_prefs.xml"/>
+        <include domain="sharedpref" path="secure_prefs.xml"/>
+        
+        <!-- Временные файлы и кэш -->
+        <include domain="file" path="temp"/>
+        <include domain="file" path="cache"/>
+        <exclude domain="file" path="temp/tmp_*"/>
+        <exclude domain="file" path="cache/tmp_*"/>
     </cloud-backup>
-    <!--
+    
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <include domain="root" path="."/>
+        <include domain="sharedpref" path="secure_prefs.xml"/>
+        <include domain="file" path="cache"/>
     </device-transfer>
-    -->
 </data-extraction-rules>

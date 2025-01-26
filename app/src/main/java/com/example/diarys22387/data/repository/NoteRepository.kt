@@ -3,6 +3,7 @@ package com.example.diarys22387.data.repository
 import com.example.diarys22387.data.model.Note
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.toObject
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -25,7 +26,7 @@ class NoteRepository @Inject constructor(
                 
                 val notes = snapshot?.documents?.mapNotNull { 
                     try {
-                        it.toObject<Note>()
+                        it.toObject<Note>()?.copy(id = it.id)
                     } catch (e: Exception) {
                         e.printStackTrace()
                         null
@@ -44,23 +45,33 @@ class NoteRepository @Inject constructor(
     }
 
     suspend fun getNote(id: String): Note? = try {
-        notesColl.document(id).get().await().toObject()
+        notesColl.document(id).get().await().toObject<Note>()?.copy(id = id)
     } catch (e: Exception) {
         e.printStackTrace()
         null
     }
 
-    suspend fun addNote(note: Note) = try {
-        notesColl.document(note.id).set(note).await()
-        Result.success(Unit)
+    suspend fun addNote(note: Note): Result<String> = try {
+        val docRef = if (note.id.isEmpty()) {
+            notesColl.document()
+        } else {
+            notesColl.document(note.id)
+        }
+        val noteWithId = note.copy(id = docRef.id)
+        docRef.set(noteWithId).await()
+        Result.success(docRef.id)
     } catch (e: Exception) {
         e.printStackTrace()
         Result.failure(e)
     }
 
     suspend fun updateNote(note: Note) = try {
-        notesColl.document(note.id).set(note).await()
-        Result.success(Unit)
+        if (note.id.isEmpty()) {
+            Result.failure(IllegalArgumentException("Note ID cannot be empty for update"))
+        } else {
+            notesColl.document(note.id).set(note).await()
+            Result.success(Unit)
+        }
     } catch (e: Exception) {
         e.printStackTrace()
         Result.failure(e)

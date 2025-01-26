@@ -8,6 +8,7 @@ import com.example.diarys22387.ui.drawing.DrawingScreen
 import com.example.diarys22387.ui.pin.PinScreen
 import com.example.diarys22387.ui.note.NotesListScreen
 import com.example.diarys22387.ui.note.AddNoteScreen
+import com.example.diarys22387.ui.note.EditNoteScreen
 import com.example.diarys22387.ui.map.MapScreen
 
 @Composable
@@ -23,13 +24,20 @@ fun DiaryNavGraph(navController: NavHostController) {
         composable("notes") {
             NotesListScreen(
                 onAddClick = { navController.navigate("addNote") },
-                onNoteClick = { /* noteId -> open details if needed */ },
+                onNoteClick = { noteId -> navController.navigate("editNote/$noteId") },
                 onMapClick = { navController.navigate("map") }
             )
         }
         composable("addNote") {
             AddNoteScreen(
                 onNoteSaved = { navController.popBackStack() }
+            )
+        }
+        composable("editNote/{noteId}") { backStackEntry ->
+            val noteId = backStackEntry.arguments?.getString("noteId") ?: return@composable
+            EditNoteScreen(
+                noteId = noteId,
+                navController = navController
             )
         }
         composable("map") {
@@ -47,6 +55,5 @@ fun DiaryNavGraph(navController: NavHostController) {
                 }
             )
         }
-
     }
 }
