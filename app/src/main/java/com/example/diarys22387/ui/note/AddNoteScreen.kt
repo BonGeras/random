@@ -1,37 +1,47 @@
 package com.example.diarys22387.ui.note
 
+import android.Manifest
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import dagger.hilt.android.lifecycle.HiltViewModel
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.example.diarys22387.data.model.Note
-import com.example.diarys22387.data.repository.NoteRepository
-import kotlinx.coroutines.launch
-import javax.inject.Inject
-import com.example.diarys22387.data.repository.MediaRepository
-import com.example.diarys22387.util.LocationManager
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.PermissionStatus
+import com.google.accompanist.permissions.rememberPermissionState
+import androidx.compose.foundation.text.KeyboardOptions
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun AddNoteScreen(
     onNoteSaved: () -> Unit,
-    viewModel: AddNoteViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    onOpenMap: () -> Unit,
+    viewModel: AddNoteViewModel = hiltViewModel()
 ) {
     var title by remember { mutableStateOf("") }
     var content by remember { mutableStateOf("") }
-    var lat by remember { mutableStateOf<Double?>(null) }
-    var lon by remember { mutableStateOf<Double?>(null) }
-    var address by remember { mutableStateOf<String?>(null) }
-
-    val uiState by viewModel.uiState.collectAsState()
+    
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    
+    val recordPermissionState = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
+    val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
+    
+    val photoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        if (success) {
+            // Photo was taken successfully
+        }
+    }
 
     LaunchedEffect(uiState) {
         if (uiState is AddNoteUiState.Success) {
@@ -39,12 +49,17 @@ fun AddNoteScreen(
         }
     }
 
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
         OutlinedTextField(
             value = title,
             onValueChange = { title = it },
             label = { Text("Title") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
         )
         
         Spacer(Modifier.height(8.dp))
@@ -53,30 +68,92 @@ fun AddNoteScreen(
             value = content,
             onValueChange = { content = it },
             label = { Text("Content") },
-            modifier = Modifier.fillMaxWidth().weight(1f)
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
         )
         
-        Spacer(Modifier.height(8.dp))
-
-        Button(
-            onClick = {
-                viewModel.setLocationIfPossible { newLat, newLon, place ->
-                    lat = newLat
-                    lon = newLon
-                    address = place
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Set Current Location")
-        }
-
-        address?.let {
-            Text(
-                "Location: $it",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(vertical = 8.dp)
+        // Audio Recording Section
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
             )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    "Audio Note",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Record button
+                    IconButton(
+                        onClick = {
+                            if (recordPermissionState.status is PermissionStatus.Granted) {
+                                viewModel.toggleRecording()
+                            } else {
+                                recordPermissionState.launchPermissionRequest()
+                            }
+                        }
+                    ) {
+                        Icon(
+                            if (viewModel.isRecording) Icons.Default.Stop else Icons.Default.Mic,
+                            contentDescription = if (viewModel.isRecording) "Stop recording" else "Start recording",
+                            tint = if (viewModel.isRecording) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    
+                    // Play button
+                    IconButton(
+                        onClick = { viewModel.toggleAudioPlayback() },
+                        enabled = !viewModel.isRecording
+                    ) {
+                        Icon(
+                            if (viewModel.isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
+                            contentDescription = if (viewModel.isPlaying) "Stop playback" else "Play recording",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+        }
+        
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            // Camera button
+            IconButton(onClick = {
+                if (cameraPermissionState.status is PermissionStatus.Granted) {
+                    viewModel.prepareImageCapture(context)?.let { uri ->
+                        photoLauncher.launch(uri)
+                    }
+                } else {
+                    cameraPermissionState.launchPermissionRequest()
+                }
+            }) {
+                Icon(Icons.Default.PhotoCamera, contentDescription = "Take photo")
+            }
+            
+            // Location button
+            IconButton(onClick = onOpenMap) {
+                Icon(Icons.Default.LocationOn, contentDescription = "Add location")
+            }
         }
 
         when (uiState) {
@@ -96,79 +173,12 @@ fun AddNoteScreen(
         }
 
         Button(
-            onClick = {
-                viewModel.addNote(title, content, lat, lon, address)
-            },
+            onClick = { viewModel.saveNote(title, content) },
             modifier = Modifier.fillMaxWidth(),
             enabled = title.isNotBlank() && uiState !is AddNoteUiState.Loading
         ) {
             Text("Save Note")
         }
     }
-}
-
-@HiltViewModel
-class AddNoteViewModel @Inject constructor(
-    private val noteRepository: NoteRepository,
-    private val locationManager: LocationManager
-) : ViewModel() {
-
-    private val _uiState = MutableStateFlow<AddNoteUiState>(AddNoteUiState.Initial)
-    val uiState: StateFlow<AddNoteUiState> = _uiState
-
-    fun addNote(
-        title: String,
-        content: String,
-        lat: Double?,
-        lon: Double?,
-        address: String?
-    ) {
-        viewModelScope.launch {
-            _uiState.value = AddNoteUiState.Loading
-            try {
-                val newNote = Note(
-                    title = title,
-                    content = content,
-                    latitude = lat,
-                    longitude = lon,
-                    address = address
-                )
-                val result = noteRepository.addNote(newNote)
-                result.fold(
-                    onSuccess = { 
-                        _uiState.value = AddNoteUiState.Success 
-                    },
-                    onFailure = { e ->
-                        _uiState.value = AddNoteUiState.Error(e.message ?: "Failed to add note")
-                    }
-                )
-            } catch (e: Exception) {
-                _uiState.value = AddNoteUiState.Error(e.message ?: "Unknown error")
-            }
-        }
-    }
-
-    fun setLocationIfPossible(onResult: (Double?, Double?, String?) -> Unit) {
-        viewModelScope.launch {
-            if (!locationManager.hasLocationPermission()) {
-                onResult(null, null, "No location permission!")
-                return@launch
-            }
-            val loc = locationManager.getLastKnownLocation()
-            if (loc != null) {
-                val place = locationManager.getAddressFromCoords(loc.latitude, loc.longitude)
-                onResult(loc.latitude, loc.longitude, place)
-            } else {
-                onResult(null, null, "Could not get location")
-            }
-        }
-    }
-}
-
-sealed class AddNoteUiState {
-    object Initial : AddNoteUiState()
-    object Loading : AddNoteUiState()
-    object Success : AddNoteUiState()
-    data class Error(val message: String) : AddNoteUiState()
 }
 

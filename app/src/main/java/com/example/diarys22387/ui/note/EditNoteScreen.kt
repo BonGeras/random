@@ -6,13 +6,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,14 +15,22 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.navigation.NavHostController
 import coil.compose.rememberAsyncImagePainter
 import com.example.diarys22387.data.model.Note
 import com.example.diarys22387.ui.components.WaveformVisualizer
-import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.*
 import kotlinx.coroutines.flow.StateFlow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Stop
@@ -46,14 +48,14 @@ import com.example.diarys22387.data.repository.NoteRepository
 import com.example.diarys22387.service.GeofenceManager
 import com.example.diarys22387.util.LocationManager
 import kotlinx.coroutines.launch
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import androidx.compose.material.icons.filled.MicNone
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun EditNoteScreen(
     noteId: String,
     navController: NavHostController,
-    viewModel: EditNoteViewModel = viewModel()
+    viewModel: EditNoteViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState
 
@@ -96,6 +98,144 @@ fun EditNoteScreen(
 }
 
 @Composable
+private fun AudioSection(
+    note: Note,
+    isRecording: Boolean,
+    isPlaying: Boolean,
+    onRecordClick: () -> Unit,
+    viewModel: EditNoteViewModel,
+    recordPermissionState: PermissionState
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Audio Note",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                
+                val recordingTime by viewModel.recordingTime.collectAsStateWithLifecycle()
+                if (isRecording) {
+                    Text(
+                        text = viewModel.formatTime(recordingTime),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+            
+            Spacer(Modifier.height(8.dp))
+            
+            if (note.audioUrl != null) {
+                val progress by viewModel.audioProgress.collectAsStateWithLifecycle()
+                val duration by viewModel.audioDuration.collectAsStateWithLifecycle()
+                val position by viewModel.audioPosition.collectAsStateWithLifecycle()
+                
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = { viewModel.toggleAudioPlayback() }
+                        ) {
+                            Icon(
+                                if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
+                                contentDescription = if (isPlaying) "Stop" else "Play",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        
+                        Spacer(Modifier.width(8.dp))
+                        
+                        Slider(
+                            value = progress,
+                            onValueChange = { viewModel.seekTo(it) },
+                            modifier = Modifier.weight(1f)
+                        )
+                        
+                        Spacer(Modifier.width(8.dp))
+                        
+                        Text(
+                            "${viewModel.formatTime(position)} / ${viewModel.formatTime(duration)}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
+            
+            Spacer(Modifier.height(8.dp))
+            
+            val amplitudes by viewModel.recordingAmplitudes.collectAsStateWithLifecycle(initialValue = emptyList())
+            
+            AnimatedVisibility(
+                visible = isRecording || amplitudes.isNotEmpty(),
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                WaveformVisualizer(
+                    amplitudes = amplitudes,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp)
+                )
+            }
+            
+            Spacer(Modifier.height(8.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                val infiniteTransition = rememberInfiniteTransition()
+                val scale by infiniteTransition.animateFloat(
+                    initialValue = 1f,
+                    targetValue = if (isRecording) 1.2f else 1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(1000),
+                        repeatMode = RepeatMode.Reverse
+                    )
+                )
+                
+                IconButton(
+                    onClick = {
+                        if (recordPermissionState.status.isGranted) {
+                            onRecordClick()
+                        } else {
+                            recordPermissionState.launchPermissionRequest()
+                        }
+                    },
+                    modifier = Modifier.graphicsLayer {
+                        scaleX = if (isRecording) scale else 1f
+                        scaleY = if (isRecording) scale else 1f
+                    }
+                ) {
+                    Icon(
+                        if (isRecording) Icons.Default.Mic else Icons.Default.MicNone,
+                        contentDescription = if (isRecording) "Stop Recording" else "Start Recording",
+                        tint = if (isRecording) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun EditNoteContent(
     note: Note,
     onTitleChanged: (String) -> Unit,
@@ -110,14 +250,18 @@ private fun EditNoteContent(
     val isRecording by viewModel.isRecording
     val isPlaying by viewModel.isPlaying
     
-    val context = LocalContext.current
     val recordPermissionState = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
 
     val address = note.address ?: "No address"
     val painter = rememberAsyncImagePainter(note.imageUrl)
 
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { viewModel.addPhoto(it) }
+    }
 
+    Column(Modifier.fillMaxSize().padding(16.dp)) {
         OutlinedTextField(
             value = title,
             onValueChange = {
@@ -125,7 +269,8 @@ private fun EditNoteContent(
                 onTitleChanged(it)
             },
             label = { Text("Title") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
         )
 
         Spacer(Modifier.height(8.dp))
@@ -137,138 +282,27 @@ private fun EditNoteContent(
                 onContentChanged(it)
             },
             label = { Text("Content") },
-            modifier = Modifier.fillMaxWidth().weight(1f)
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+            maxLines = Int.MAX_VALUE
         )
 
         Spacer(Modifier.height(8.dp))
 
-        // Аудио секция
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Text(
-                    "Audio Note",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                
-                Spacer(Modifier.height(8.dp))
-                
-                if (note.audioUrl != null) {
-                    val progress by viewModel.audioProgress.collectAsStateWithLifecycle()
-                    val duration by viewModel.audioDuration.collectAsStateWithLifecycle()
-                    val position by viewModel.audioPosition.collectAsStateWithLifecycle()
-                    
-                    Column {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(
-                                onClick = { viewModel.toggleAudioPlayback() }
-                            ) {
-                                Icon(
-                                    if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
-                                    contentDescription = if (isPlaying) "Stop" else "Play",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                            
-                            Spacer(Modifier.width(8.dp))
-                            
-                            Slider(
-                                value = progress,
-                                onValueChange = { viewModel.seekTo(it) },
-                                modifier = Modifier.weight(1f)
-                            )
-                            
-                            Spacer(Modifier.width(8.dp))
-                            
-                            Text(
-                                "${viewModel.formatTime(position)} / ${viewModel.formatTime(duration)}",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                    }
-                }
-                
+        AudioSection(
+            note = note,
+            isRecording = isRecording,
+            isPlaying = isPlaying,
+            onRecordClick = {
                 if (isRecording) {
-                    val amplitudes by viewModel.recordingAmplitudes.collectAsStateWithLifecycle()
-                    WaveformVisualizer(
-                        amplitudes = amplitudes,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        color = MaterialTheme.colorScheme.error
-                    )
+                    viewModel.stopRecording()
+                } else {
+                    viewModel.startRecording()
                 }
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (isRecording) {
-                        Text(
-                            "Recording...",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(end = 8.dp)
-                        )
-                        
-                        IconButton(
-                            onClick = { viewModel.cancelRecording() }
-                        ) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = "Cancel recording",
-                                tint = MaterialTheme.colorScheme.error
-                            )
-                        }
-                        
-                        IconButton(
-                            onClick = { viewModel.stopRecording() }
-                        ) {
-                            Icon(
-                                Icons.Default.Stop,
-                                contentDescription = "Stop recording",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    } else {
-                        if (viewModel.hasPermission()) {
-                            IconButton(
-                                onClick = { viewModel.startRecording() }
-                            ) {
-                                Icon(
-                                    Icons.Default.Mic,
-                                    contentDescription = "Start recording",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        } else {
-                            IconButton(
-                                onClick = { recordPermissionState.launchPermissionRequest() }
-                            ) {
-                                Icon(
-                                    Icons.Default.Mic,
-                                    contentDescription = "Request recording permission",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
+            },
+            viewModel = viewModel,
+            recordPermissionState = recordPermissionState
+        )
 
         Spacer(Modifier.height(8.dp))
 
@@ -293,25 +327,44 @@ private fun EditNoteContent(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Button(onClick = onUpdateLocation) {
-                Icon(Icons.Default.LocationOn, contentDescription = "Location")
-                Spacer(Modifier.width(4.dp))
-                Text("Update location")
-            }
-
-            Button(onClick = onDrawClicked) {
-                Icon(Icons.Default.Edit, contentDescription = "Draw")
-                Spacer(Modifier.width(4.dp))
-                Text("Draw")
-            }
-
-            Button(
-                onClick = onSaveClicked,
-                enabled = !isRecording
+            IconButton(
+                onClick = onUpdateLocation
             ) {
-                Icon(Icons.Default.Save, contentDescription = "Save")
-                Spacer(Modifier.width(4.dp))
-                Text("Save")
+                Icon(
+                    Icons.Default.LocationOn,
+                    contentDescription = "Update location",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            IconButton(
+                onClick = onDrawClicked
+            ) {
+                Icon(
+                    Icons.Default.Edit,
+                    contentDescription = "Draw",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            IconButton(
+                onClick = { photoPickerLauncher.launch("image/*") }
+            ) {
+                Icon(
+                    Icons.Default.PhotoCamera,
+                    contentDescription = "Add photo",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            IconButton(
+                onClick = onSaveClicked
+            ) {
+                Icon(
+                    Icons.Default.Save,
+                    contentDescription = "Save note",
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }

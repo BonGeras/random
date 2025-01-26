@@ -6,12 +6,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
 fun PinScreen(
     onPinSuccess: () -> Unit,
-    viewModel: PinViewModel = viewModel()
+    viewModel: PinViewModel = hiltViewModel()
 ) {
     var pin by remember { mutableStateOf("") }
     var error by remember { mutableStateOf(false) }

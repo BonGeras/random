@@ -6,6 +6,12 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+val mapsApiKey: String = gradle.rootProject.file("local.properties")
+    .readLines()
+    .firstOrNull { it.startsWith("MAPS_API_KEY=") }
+    ?.substringAfter("=")
+    ?: ""
+
 android {
     namespace = "com.example.diarys22387"
     compileSdk = 34
@@ -16,6 +22,8 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

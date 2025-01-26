@@ -5,7 +5,9 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
+import androidx.lifecycle.lifecycleScope
 import com.example.diarys22387.data.DemoDataInitializer
+import com.google.firebase.FirebaseApp
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.*
 import javax.inject.Inject
@@ -16,12 +18,29 @@ class DiarysApp : Application() {
     @Inject
     lateinit var demoInitializer: DemoDataInitializer
 
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
     override fun onCreate() {
         super.onCreate()
-        GlobalScope.launch(Dispatchers.IO) {
-            demoInitializer.loadDemoDataIfNeeded()
+        
+        // Initialize Firebase first
+        FirebaseApp.initializeApp(this)
+        
+        // Then load demo data
+        appScope.launch(Dispatchers.IO) {
+            try {
+                demoInitializer.loadDemoDataIfNeeded()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
+        
         createNotificationChannel()
+    }
+
+    override fun onTerminate() {
+        super.onTerminate()
+        appScope.cancel()
     }
 
     private fun createNotificationChannel() {

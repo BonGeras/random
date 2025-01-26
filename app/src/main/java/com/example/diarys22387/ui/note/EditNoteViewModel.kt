@@ -16,6 +16,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 
 @HiltViewModel
 class EditNoteViewModel @Inject constructor(
@@ -44,6 +45,11 @@ class EditNoteViewModel @Inject constructor(
     private var currentAudioUri: Uri? = null
 
     val recordingAmplitudes = audioRecorder.amplitudes
+
+    private val _recordingTime = MutableStateFlow(0)
+    val recordingTime: StateFlow<Int> = _recordingTime.asStateFlow()
+    
+    private var recordingJob: Job? = null
 
     fun formatTime(millis: Int): String = audioPlayer.formatTime(millis)
 
@@ -83,6 +89,15 @@ class EditNoteViewModel @Inject constructor(
             try {
                 currentAudioUri = audioRecorder.startRecording()
                 _isRecording.value = true
+                
+                // Запускаем отслеживание времени записи
+                recordingJob = viewModelScope.launch {
+                    _recordingTime.value = 0
+                    while (isActive) {
+                        delay(1000)
+                        _recordingTime.value += 1000
+                    }
+                }
             } catch (e: SecurityException) {
                 _uiState.value = EditNoteUiState.Error("Recording permission not granted")
             } catch (e: Exception) {
@@ -93,6 +108,10 @@ class EditNoteViewModel @Inject constructor(
 
     fun stopRecording() {
         if (_isRecording.value) {
+            recordingJob?.cancel()
+            recordingJob = null
+            _recordingTime.value = 0
+            
             audioRecorder.stopRecording()
             _isRecording.value = false
             
@@ -101,8 +120,12 @@ class EditNoteViewModel @Inject constructor(
                 viewModelScope.launch {
                     try {
                         val audioUrl = mediaRepository.uploadAudio(uri)
-                        currentNote = currentNote?.copy(audioUrl = audioUrl)
-                        refreshUi()
+                        currentNote?.let { note ->
+                            val updatedNote = note.copy(audioUrl = audioUrl)
+                            noteRepository.updateNote(updatedNote)
+                            currentNote = updatedNote
+                            _uiState.value = EditNoteUiState.Success(updatedNote)
+                        }
                     } catch (e: Exception) {
                         _uiState.value = EditNoteUiState.Error("Failed to upload audio: ${e.message}")
                     }
@@ -121,8 +144,9 @@ class EditNoteViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        cancelRecording()
-        audioPlayer.stopPlaying()
+        recordingJob?.cancel()
+        audioPlayer.release()
+        audioRecorder.release()
     }
 
     fun updateTitle(newTitle: String) {
@@ -182,5 +206,20 @@ class EditNoteViewModel @Inject constructor(
 
     fun hasPermission(): Boolean {
         return locationManager.hasLocationPermission()
+    }
+
+    fun addPhoto(uri: Uri) {
+        viewModelScope.launch {
+            try {
+                val imageUrl = mediaRepository.uploadImage(uri)
+                currentNote?.let { note ->
+                    val updatedNote = note.copy(imageUrl = imageUrl)
+                    currentNote = updatedNote
+                    _uiState.value = EditNoteUiState.Success(updatedNote)
+                }
+            } catch (e: Exception) {
+                _uiState.value = EditNoteUiState.Error("Failed to upload image: ${e.message}")
+            }
+        }
     }
 } 

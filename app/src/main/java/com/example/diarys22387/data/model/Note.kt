@@ -8,7 +8,8 @@ data class Note(
     val audioUrl: String? = null,
     val latitude: Double? = null,
     val longitude: Double? = null,
-    val address: String? = null
+    val address: String? = null,
+    val timestamp: Long = System.currentTimeMillis()
 ) {
     fun hasLocation(): Boolean = latitude != null && longitude != null
 }

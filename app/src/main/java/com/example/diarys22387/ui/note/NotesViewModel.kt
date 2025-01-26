@@ -6,6 +6,7 @@ import com.example.diarys22387.data.model.Note
 import com.example.diarys22387.data.repository.NoteRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -44,6 +45,15 @@ class NotesViewModel @Inject constructor(
                 _uiState.value = NotesUiState.Error(e.message ?: "Unknown error")
             }
         }
+    }
+
+    fun getNote(noteId: String): Flow<Note?> {
+        return flow {
+            emit(noteRepository.getNote(noteId))
+        }.catch { e ->
+            e.printStackTrace()
+            emit(null)
+        }.flowOn(Dispatchers.IO)
     }
 }
 

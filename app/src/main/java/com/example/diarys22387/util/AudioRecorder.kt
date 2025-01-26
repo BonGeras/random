@@ -41,10 +41,13 @@ class AudioRecorder @Inject constructor(
         val audioFile = File(context.cacheDir, "audio_${System.currentTimeMillis()}.mp3")
         currentFile = audioFile
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            recorder = MediaRecorder(context)
-        } else {
-            recorder = MediaRecorder()
+        recorder = createMediaRecorder().apply {
+            setAudioSource(MediaRecorder.AudioSource.MIC)
+            setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+            setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+            setOutputFile(audioFile.absolutePath)
+            prepare()
+            start()
         }
         
         // Создаем AudioRecord для визуализации
@@ -62,15 +65,6 @@ class AudioRecorder @Inject constructor(
             minBufferSize
         )
 
-        recorder?.apply {
-            setAudioSource(MediaRecorder.AudioSource.MIC)
-            setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-            setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-            setOutputFile(audioFile.absolutePath)
-            prepare()
-            start()
-        }
-        
         audioRecord?.startRecording()
         visualizer.start(audioRecord!!)
 
@@ -79,6 +73,15 @@ class AudioRecorder @Inject constructor(
             "${context.packageName}.provider",
             audioFile
         )
+    }
+
+    private fun createMediaRecorder(): MediaRecorder {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            MediaRecorder(context)
+        } else {
+            @Suppress("DEPRECATION")
+            MediaRecorder()
+        }
     }
 
     fun stopRecording() {
@@ -104,5 +107,11 @@ class AudioRecorder @Inject constructor(
     fun deleteRecording() {
         currentFile?.delete()
         currentFile = null
+    }
+
+    fun release() {
+        stopRecording()
+        visualizer.stop()
+        deleteRecording()
     }
 } 

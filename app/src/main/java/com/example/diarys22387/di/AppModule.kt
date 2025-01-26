@@ -13,6 +13,7 @@ import com.example.diarys22387.util.AudioPlayer
 import com.example.diarys22387.util.AudioRecorder
 import com.example.diarys22387.util.LocationManager
 import com.example.diarys22387.service.GeofenceManager
+import com.example.diarys22387.data.repository.NoteRepository
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -25,6 +26,12 @@ object AppModule {
     @Provides
     @Singleton
     fun provideFirebaseStorage(): FirebaseStorage = FirebaseStorage.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideNoteRepository(firestore: FirebaseFirestore): NoteRepository {
+        return NoteRepository(firestore)
+    }
 
     @Provides
     @Singleton
