@@ -19,7 +19,6 @@ class PinViewModel @Inject constructor(
     fun validatePin(pin: String): Boolean {
         val savedPin = securePreferences.getPin()
         return if (savedPin == null) {
-            // Если PIN еще не установлен, сохраняем первый введенный PIN
             securePreferences.savePin(pin)
             true
         } else {
@@ -29,5 +28,19 @@ class PinViewModel @Inject constructor(
     
     fun updatePin(pin: String) {
         _pinState.value = pin
+    }
+
+    fun checkPin(pin: String) {
+        viewModelScope.launch {
+            val savedPin = securePreferences.getPin()
+            if (savedPin == null) {
+                securePreferences.savePin(pin)
+                _uiState.value = PinUiState.Success
+            } else if (pin == savedPin) {
+                _uiState.value = PinUiState.Success
+            } else {
+                _uiState.value = PinUiState.Error("Incorrect PIN")
+            }
+        }
     }
 } 

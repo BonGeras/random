@@ -29,73 +29,72 @@ fun NotesListScreen(
     onMapClick: () -> Unit,
     viewModel: NotesViewModel = hiltViewModel()
 ) {
-    val notes by viewModel.notes.collectAsStateWithLifecycle()
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var showDeleteDialog by remember { mutableStateOf(false) }
     var noteToDelete by remember { mutableStateOf<Note?>(null) }
-
-    // Диалог подтверждения удаления
-    noteToDelete?.let { note ->
+    
+    val notes by viewModel.notes.collectAsStateWithLifecycle()
+    val error by viewModel.error.collectAsStateWithLifecycle()
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        if (error != null) {
+            Text(
+                text = error ?: "",
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
+        
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(notes) { note ->
+                NoteCard(
+                    note = note,
+                    onClick = { onNoteClick(note.id) },
+                    onDeleteClick = {
+                        noteToDelete = note
+                        showDeleteDialog = true
+                    }
+                )
+            }
+        }
+        
+        Button(
+            onClick = onAddClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 16.dp)
+        ) {
+            Text("Add Note")
+        }
+    }
+    
+    if (showDeleteDialog) {
         AlertDialog(
-            onDismissRequest = { noteToDelete = null },
+            onDismissRequest = { showDeleteDialog = false },
             title = { Text("Delete Note") },
-            text = { Text("Are you sure you want to delete '${note.title}'?") },
+            text = { Text("Are you sure you want to delete this note?") },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.deleteNote(note.id)
-                        noteToDelete = null
+                        noteToDelete?.let { viewModel.deleteNote(it.id) }
+                        showDeleteDialog = false
                     }
                 ) {
                     Text("Delete")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { noteToDelete = null }) {
+                TextButton(onClick = { showDeleteDialog = false }) {
                     Text("Cancel")
                 }
             }
         )
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Diary Notes") },
-                actions = {
-                    IconButton(onClick = onMapClick) {
-                        Icon(Icons.Default.Map, contentDescription = "Map")
-                    }
-                }
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = onAddClick) {
-                Icon(Icons.Default.Add, contentDescription = "Add Note")
-            }
-        }
-    ) { padding ->
-        Box(modifier = Modifier.padding(padding)) {
-            LazyColumn {
-                items(notes) { note ->
-                    NoteItem(
-                        note = note,
-                        onClick = { onNoteClick(note.id) },
-                        onDelete = { noteToDelete = note }
-                    )
-                }
-            }
-
-            // Показываем ошибку, если она есть
-            if (uiState is NotesUiState.Error) {
-                Snackbar(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(16.dp)
-                ) {
-                    Text((uiState as NotesUiState.Error).message)
-                }
-            }
-        }
     }
 }
 

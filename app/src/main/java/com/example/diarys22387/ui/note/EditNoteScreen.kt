@@ -2,6 +2,7 @@ package com.example.diarys22387.ui.note
 
 import android.Manifest
 import android.net.Uri
+import android.os.Build
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -30,6 +31,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Save
@@ -50,6 +52,7 @@ import com.example.diarys22387.util.LocationManager
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.MicNone
 
+@RequiresApi(Build.VERSION_CODES.Q)
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun EditNoteScreen(

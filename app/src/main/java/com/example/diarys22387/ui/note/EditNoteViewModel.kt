@@ -1,6 +1,8 @@
 package com.example.diarys22387.ui.note
 
 import android.net.Uri
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
@@ -90,7 +92,6 @@ class EditNoteViewModel @Inject constructor(
                 currentAudioUri = audioRecorder.startRecording()
                 _isRecording.value = true
                 
-                // Запускаем отслеживание времени записи
                 recordingJob = viewModelScope.launch {
                     _recordingTime.value = 0
                     while (isActive) {
@@ -115,7 +116,6 @@ class EditNoteViewModel @Inject constructor(
             audioRecorder.stopRecording()
             _isRecording.value = false
             
-            // Загружаем аудио в Firebase Storage
             currentAudioUri?.let { uri ->
                 viewModelScope.launch {
                     try {
@@ -181,6 +181,7 @@ class EditNoteViewModel @Inject constructor(
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     fun saveNote() {
         viewModelScope.launch {
             val note = currentNote ?: return@launch

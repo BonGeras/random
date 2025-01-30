@@ -59,7 +59,7 @@ class AudioManager @Inject constructor(
     fun startPlaying(file: File) {
         player = MediaPlayer().apply {
             try {
-                setDataSource(file.absolutePath)
+                setDataSource(context, android.net.Uri.fromFile(file))
                 prepare()
                 start()
             } catch (e: IOException) {

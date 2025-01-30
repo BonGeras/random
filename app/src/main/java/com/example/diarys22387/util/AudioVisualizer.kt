@@ -34,16 +34,13 @@ class AudioVisualizer {
             audioRecord?.let { recorder ->
                 val read = recorder.read(buffer, 0, bufferSize)
                 if (read > 0) {
-                    // Вычисляем среднюю амплитуду для текущего буфера
                     val amplitude = buffer.take(read)
                         .map { abs(it.toFloat()) }
                         .average()
                         .toFloat()
                     
-                    // Нормализуем значение от 0 до 1
                     val normalizedAmplitude = (amplitude / Short.MAX_VALUE).coerceIn(0f, 1f)
                     
-                    // Добавляем новое значение и удаляем старое
                     _amplitudes.value = _amplitudes.value.drop(1) + normalizedAmplitude
                 }
             }

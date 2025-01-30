@@ -5,6 +5,8 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import com.example.diarys22387.data.model.Note
 import com.google.android.gms.location.*
@@ -19,6 +21,7 @@ class GeofenceManager @Inject constructor(
         LocationServices.getGeofencingClient(context)
     }
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     fun addGeofenceForNote(note: Note) {
         try {
             if (!hasLocationPermission()) return
@@ -26,7 +29,7 @@ class GeofenceManager @Inject constructor(
 
             val geofence = Geofence.Builder()
                 .setRequestId(note.id)
-                .setCircularRegion(note.latitude, note.longitude, 1000f) // 1 km
+                .setCircularRegion(note.latitude, note.longitude, 1000f)
                 .setExpirationDuration(Geofence.NEVER_EXPIRE)
                 .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER)
                 .build()
@@ -42,6 +45,7 @@ class GeofenceManager @Inject constructor(
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     fun removeGeofence(noteId: String) {
         if (!hasLocationPermission()) return
         geofencingClient.removeGeofences(listOf(noteId))
@@ -59,6 +63,7 @@ class GeofenceManager @Inject constructor(
         )
     }
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     private fun hasLocationPermission(): Boolean {
         val fine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
         val background = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_BACKGROUND_LOCATION)

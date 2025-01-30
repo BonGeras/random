@@ -2,6 +2,7 @@ package com.example.diarys22387.util
 
 import android.content.Context
 import android.media.MediaPlayer
+import android.net.Uri
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,7 +38,7 @@ class AudioPlayer @Inject constructor(
         
         try {
             player = MediaPlayer().apply {
-                setDataSource(url)
+                setDataSource(context, Uri.parse(url))
                 setOnPreparedListener { mp ->
                     _duration.value = mp.duration
                     startProgressUpdates()

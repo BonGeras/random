@@ -5,10 +5,15 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
 @Composable
-fun DiarysTheme(content: @Composable () -> Unit) {
-    val colorScheme = lightColorScheme(
-        // primary, secondary, ...
-    )
+fun DiarysTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    content: @Composable () -> Unit
+) {
+    val colorScheme = when {
+        darkTheme -> DarkColorScheme
+        else -> LightColorScheme
+    }
+
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,

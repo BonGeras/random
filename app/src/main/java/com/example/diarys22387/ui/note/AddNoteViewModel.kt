@@ -125,7 +125,6 @@ class AddNoteViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = AddNoteUiState.Loading
             try {
-                // Upload media files if they exist
                 val imageUrl = currentImageUri?.let { uri ->
                     mediaRepository.uploadImage(uri)
                 }
@@ -133,7 +132,6 @@ class AddNoteViewModel @Inject constructor(
                     mediaRepository.uploadAudio(uri)
                 }
 
-                // Create and save the note
                 val note = Note(
                     title = title,
                     content = content,

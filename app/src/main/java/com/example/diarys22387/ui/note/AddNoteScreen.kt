@@ -39,7 +39,6 @@ fun AddNoteScreen(
     
     val photoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
         if (success) {
-            // Photo was taken successfully
         }
     }
 
@@ -74,7 +73,6 @@ fun AddNoteScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
         )
         
-        // Audio Recording Section
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -99,7 +97,6 @@ fun AddNoteScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Record button
                     IconButton(
                         onClick = {
                             if (recordPermissionState.status is PermissionStatus.Granted) {
@@ -116,7 +113,6 @@ fun AddNoteScreen(
                         )
                     }
                     
-                    // Play button
                     IconButton(
                         onClick = { viewModel.toggleAudioPlayback() },
                         enabled = !viewModel.isRecording
@@ -137,7 +133,6 @@ fun AddNoteScreen(
                 .padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            // Camera button
             IconButton(onClick = {
                 if (cameraPermissionState.status is PermissionStatus.Granted) {
                     viewModel.prepareImageCapture(context)?.let { uri ->
@@ -150,7 +145,6 @@ fun AddNoteScreen(
                 Icon(Icons.Default.PhotoCamera, contentDescription = "Take photo")
             }
             
-            // Location button
             IconButton(onClick = onOpenMap) {
                 Icon(Icons.Default.LocationOn, contentDescription = "Add location")
             }
@@ -169,7 +163,7 @@ fun AddNoteScreen(
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
             }
-            else -> { /* no-op */ }
+            else -> {}
         }
 
         Button(

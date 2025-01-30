@@ -50,7 +50,6 @@ class AudioRecorder @Inject constructor(
             start()
         }
         
-        // Создаем AudioRecord для визуализации
         val minBufferSize = AudioRecord.getMinBufferSize(
             44100,
             android.media.AudioFormat.CHANNEL_IN_MONO,

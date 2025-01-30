@@ -23,10 +23,8 @@ class DiarysApp : Application() {
     override fun onCreate() {
         super.onCreate()
         
-        // Initialize Firebase first
         FirebaseApp.initializeApp(this)
         
-        // Then load demo data
         appScope.launch(Dispatchers.IO) {
             try {
                 demoInitializer.loadDemoDataIfNeeded()

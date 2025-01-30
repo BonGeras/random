@@ -6,6 +6,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.navigation.compose.rememberNavController
 import com.example.diarys22387.ui.navigation.DiaryNavGraph
 import com.example.diarys22387.ui.theme.DiarysTheme
@@ -22,6 +23,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -35,6 +37,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     private fun requestPermissions() {
         val permissions = mutableListOf(
             Manifest.permission.ACCESS_FINE_LOCATION,

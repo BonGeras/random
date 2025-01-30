@@ -1,18 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
--->
+<?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
-        <!-- Основные данные приложения -->
         <include domain="root" path="."/>
         <include domain="file" path="images"/>
         <include domain="database" path="notes.db"/>
         <include domain="sharedpref" path="default_prefs.xml"/>
         <include domain="sharedpref" path="secure_prefs.xml"/>
         
-        <!-- Временные файлы и кэш -->
         <include domain="file" path="temp"/>
         <include domain="file" path="cache"/>
         <exclude domain="file" path="temp/tmp_*"/>
